@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 서울시장 선거 — 구별 투표율·득표율 분석</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0f14;
+  --surface:#161921;
+  --surface2:#1e2230;
+  --border:#2a2f3e;
+  --text:#e8eaf0;
+  --muted:#7a8099;
+  --blue:#4a9eff;
+  --blue-dim:rgba(74,158,255,0.15);
+  --red:#ff5f6e;
+  --red-dim:rgba(255,95,110,0.15);
+  --green:#3dd68c;
+  --amber:#f5a623;
+  --radius:10px;
+}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;min-height:100vh;}
+
+/* header */
+.hero{padding:56px 24px 40px;text-align:center;border-bottom:1px solid var(--border);}
+.hero-eyebrow{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:14px;}
+.hero h1{font-size:clamp(22px,4vw,34px);font-weight:700;line-height:1.25;margin-bottom:12px;}
+.hero h1 em{color:var(--blue);font-style:normal;}
+.hero-sub{color:var(--muted);font-size:13px;max-width:520px;margin:0 auto 24px;}
+.hero-meta{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;}
+.meta-chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);}
+
+/* kpi strip */
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--border);border-bottom:1px solid var(--border);}
+.kpi-cell{background:var(--surface);padding:20px 24px;}
+.kpi-v{font-size:24px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);}
+.kpi-v.blue{color:var(--blue);}
+.kpi-v.red{color:var(--red);}
+.kpi-v.green{color:var(--green);}
+.kpi-l{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* nav */
+.nav{display:flex;gap:0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;}
+.nav::-webkit-scrollbar{display:none;}
+.nav-btn{background:none;border:none;border-bottom:2px solid transparent;padding:14px 22px;font-size:13px;font-family:'Noto Sans KR',sans-serif;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .2s;}
+.nav-btn:hover{color:var(--text);}
+.nav-btn.active{color:var(--blue);border-bottom-color:var(--blue);}
+
+/* sections */
+.section{display:none;padding:28px 20px;max-width:900px;margin:0 auto;}
+.section.active{display:block;}
+.section-title{font-size:15px;font-weight:700;margin-bottom:6px;}
+.section-desc{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+
+/* chart wrapper */
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+.chart-inner{position:relative;width:100%;}
+
+/* legend */
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+.leg{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+.leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+
+/* quad grid */
+.quad-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.quad{border-radius:var(--radius);padding:12px 14px;font-size:12px;line-height:1.6;border:1px solid;}
+.quad.q1{background:rgba(74,158,255,0.08);border-color:rgba(74,158,255,0.25);color:#a8c8ff;}
+.quad.q2{background:rgba(61,214,140,0.07);border-color:rgba(61,214,140,0.2);color:#8de8b8;}
+.quad.q3{background:rgba(255,95,110,0.08);border-color:rgba(255,95,110,0.22);color:#ffaab3;}
+.quad.q4{background:rgba(245,166,35,0.08);border-color:rgba(245,166,35,0.2);color:#f5cc7a;}
+.quad strong{display:block;margin-bottom:4px;font-size:11px;letter-spacing:.5px;}
+
+/* finding cards */
+.finding{border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;font-size:12px;line-height:1.8;border-left:3px solid;}
+.finding.blue{background:var(--blue-dim);border-left-color:var(--blue);}
+.finding.red{background:var(--red-dim);border-left-color:var(--red);}
+.finding.green{background:rgba(61,214,140,0.08);border-left-color:var(--green);}
+.finding.amber{background:rgba(245,166,35,0.08);border-left-color:var(--amber);}
+.finding strong{color:var(--text);}
+
+/* table */
+.tbl-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead tr{background:var(--surface2);}
+th{padding:10px 12px;text-align:left;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+td{padding:9px 12px;border-bottom:1px solid rgba(42,47,62,.5);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+.won{color:var(--blue);font-weight:500;}
+.lost{color:var(--red);}
+.bar-cell{display:flex;align-items:center;gap:6px;}
+.mini-bar{height:6px;border-radius:3px;min-width:2px;}
+
+/* footnote */
+.footnote{font-size:11px;color:var(--muted);padding:20px;text-align:center;border-top:1px solid var(--border);line-height:1.6;}
+.footnote a{color:var(--blue);text-decoration:none;}
+
+@media(max-width:600px){
+  .quad-grid{grid-template-columns:1fr;}
+  .kpi-v{font-size:20px;}
+  .hero h1{font-size:20px;}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">데이터 분석 · 2026.06.03</div>
+  <h1>오세훈은 왜 이겼나<br><em>투표율</em>이 말해주는 진짜 구조</h1>
+  <p class="hero-sub">"부동산 표가 결집했다"는 통설을 확정 데이터로 검증합니다.<br>서울 24개 구 투표율 × 득표율 교차 분석.</p>
+  <div class="hero-meta">
+    <span class="meta-chip">출처: 중앙선거관리위원회 확정</span>
+    <span class="meta-chip">24개 구 (송파 제외 — 투표용지 부족)</span>
+    <span class="meta-chip">오세훈 49.08% vs 정원오 48.20%</span>
+  </div>
+</div>
+
+<div class="kpi-strip">
+  <div class="kpi-cell"><div class="kpi-v blue">45,497표</div><div class="kpi-l">오세훈 역전 폭 (전체 기준)</div></div>
+  <div class="kpi-cell"><div class="kpi-v">63.6%</div><div class="kpi-l">서울 평균 투표율</div></div>
+  <div class="kpi-cell"><div class="kpi-v red">58.8%</div><div class="kpi-l">최저 — 관악·금천 (진보 텃밭)</div></div>
+  <div class="kpi-cell"><div class="kpi-v green">66.3%</div><div class="kpi-l">최고 — 서초</div></div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="show('scatter')">핵심 산포도</button>
+  <button class="nav-btn" onclick="show('gap')">구별 득표 격차</button>
+  <button class="nav-btn" onclick="show('turnout')">투표율 순위</button>
+  <button class="nav-btn" onclick="show('table')">전체 데이터표</button>
+  <button class="nav-btn" onclick="show('verdict')">결론 분석</button>
+</nav>
+
+<!-- 산포도 -->
+<div id="sec-scatter" class="section active">
+  <div class="section-title">투표율 × 오세훈 득표율 산포도</div>
+  <div class="section-desc">X축: 구별 투표율 / Y축: 오세훈 득표율 / 버블 크기: 실제 투표자 수<br>기준선: 투표율 평균 63.6%, 득표율 50%</div>
+  <div class="quad-grid">
+    <div class="quad q1"><strong>🔵 고투표율 + 오세훈 우세</strong>보수 결집 지역 — 많이 나와서 보수가 이긴 곳</div>
+    <div class="quad q2"><strong>🟢 고투표율 + 정원오 우세</strong>진보 결집 지역 — 많이 나왔는데 진보가 이긴 곳</div>
+    <div class="quad q3"><strong>🔴 저투표율 + 오세훈 우세</strong>보수 기본기 지역 — 적게 나와도 보수가 이기는 곳 (강남·서초)</div>
+    <div class="quad q4"><strong>🟡 저투표율 + 정원오 우세</strong>⚠️ 진보 동원 실패 — 진보 텃밭인데 투표 안 나온 곳</div>
+  </div>
+  <div class="chart-wrap"><div class="chart-inner" style="height:420px;"><canvas id="scatChart"></canvas></div></div>
+  <div class="finding red" id="scatFinding"></div>
+</div>
+
+<!-- 득표 격차 -->
+<div id="sec-gap" class="section">
+  <div class="section-title">구별 오세훈 vs 정원오 득표 격차</div>
+  <div class="section-desc">오세훈 득표율 — 정원오 득표율 (%p). 양수 = 오세훈 우세, 음수 = 정원오 우세.</div>
+  <div class="legend">
+    <span class="leg"><span class="leg-dot" style="background:var(--blue);"></span>오세훈 우세</span>
+    <span class="leg"><span class="leg-dot" style="background:var(--red);"></span>정원오 우세</span>
+  </div>
+  <div class="chart-wrap"><div class="chart-inner" style="height:600px;"><canvas id="gapChart"></canvas></div></div>
+</div>
+
+<!-- 투표율 순위 -->
+<div id="sec-turnout" class="section">
+  <div class="section-title">투표율 순위 × 승패 분포</div>
+  <div class="section-desc">투표율 높은 순 정렬. ★ = 오세훈 승리. 투표율이 높은 구에서 어느 후보가 더 많이 이겼는지 확인.</div>
+  <div class="legend">
+    <span class="leg"><span class="leg-dot" style="background:rgba(74,158,255,0.9);"></span>오세훈 (승리 구: 진하게)</span>
+    <span class="leg"><span class="leg-dot" style="background:rgba(255,95,110,0.9);"></span>정원오 (승리 구: 진하게)</span>
+  </div>
+  <div class="chart-wrap"><div class="chart-inner" style="height:600px;"><canvas id="rankChart"></canvas></div></div>
+  <div class="finding amber" id="rankFinding"></div>
+</div>
+
+<!-- 전체 데이터표 -->
+<div id="sec-table" class="section">
+  <div class="section-title">전체 확정 데이터 (24개 구)</div>
+  <div class="section-desc">출처: 중앙선거관리위원회. 송파구는 투표용지 부족 사태로 일부 미집계 제외.</div>
+  <div class="tbl-wrap">
+    <table id="dataTable">
+      <thead><tr>
+        <th>구</th><th>선거인수</th><th>투표자</th><th>투표율</th>
+        <th>오세훈</th><th>정원오</th><th>격차</th><th>결과</th>
+      </tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 결론 -->
+<div id="sec-verdict" class="section">
+  <div class="section-title">분석 결론</div>
+  <div class="section-desc">확정 데이터 기반 검증. 3가지 가설을 순서대로 따진다.</div>
+  <div class="finding blue">
+    <strong>가설 1. "부동산 표가 결집해서 오세훈이 이겼다" — ❌ 불충분</strong><br>
+    부동산 최고가 지역인 강남(62.6%)·서초(66.3%) 중 강남은 서울 평균 이하 투표율.<br>
+    고가 지역 투표율↑ = 오세훈↑ 상관관계가 뚜렷하지 않다.<br>
+    강남·서초가 압승한 건 맞지만, 이는 '결집'이 아니라 <strong>압도적 기본 지지율</strong>의 효과.
+  </div>
+  <div class="finding red">
+    <strong>가설 2. "진보 동원 실패가 역전을 허용했다" — ✅ 강하게 지지됨</strong><br>
+    관악(450,187명 선거인, 투표율 58.8%): 서울 평균만큼 나왔다면 <strong>약 22,000표 추가</strong><br>
+    금천(58.8%) · 강북(59.8%) · 중랑(61.2%) · 강서(62.0%) · 은평(62.4%) · 구로(62.7%)<br>
+    이 구들은 모두 정원오가 이겼지만 투표율이 평균보다 1~5%p 낮다.<br>
+    오세훈 역전 폭이 3만 표임을 감안하면 <strong>관악 한 구의 이탈이 선거 결과를 바꿀 수준</strong>.
+  </div>
+  <div class="finding green">
+    <strong>가설 3. "오세훈 개인 브랜드가 당 지지율을 넘었다" — ✅ 부분 지지</strong><br>
+    같은 날 구청장 선거는 민주당 17 : 국힘 8. 시장 선거만 오세훈이 이겼다.<br>
+    정당 투표(구청장)와 인물 투표(시장)가 같은 유권자에게서 갈린 것.<br>
+    → 오세훈 브랜드가 없었다면 역전 불가능.
+  </div>
+  <div class="finding amber">
+    <strong>5 Whys — 오세훈 역전의 구조</strong><br>
+    <strong>Q1.</strong> 오세훈이 이긴 이유? → 강남3구+강동·동작·영등포에서 충분한 표차 확보<br>
+    <strong>Q2.</strong> 왜 그 구들이 결정적? → 절대 선거인수 많고 득표율 격차 압도적<br>
+    <strong>Q3.</strong> 왜 정원오가 못 막았나? → 진보 텃밭(관악·금천·강북 등) 투표율 평균 -3~5%p<br>
+    <strong>Q4.</strong> 왜 진보 텃밭 투표율이 낮았나? → 탄핵 분노로 대선엔 나왔지만 지선은 동원 동력 부족<br>
+    <strong>Q5.</strong> 그럼 부동산이 원인? → 구조적 배경이지, 이번 역전의 엔진은 <strong>진보 유권자의 지선 이탈</strong>
+  </div>
+</div>
+
+<div class="footnote">
+  데이터 출처: 중앙선거관리위원회 제9회 전국동시지방선거 확정 개표 결과 (2026.06.03)<br>
+  송파구는 투표용지 부족 사태로 일부 개표 미완료, 분석에서 제외.<br>
+  분석·시각화: <a href="https://www.youtube.com/@howitwhy" target="_blank">도그왜(howitwhy)</a>
+</div>
+
+<script>
+const D = [
+  {g:'종로',  elec:125290, voted:79678,  rate:63.59, ose:47.02, jeon:49.97},
+  {g:'중구',  elec:109510, voted:70281,  rate:64.17, ose:49.60, jeon:47.92},
+  {g:'용산',  elec:181207, voted:114657, rate:63.28, ose:57.09, jeon:40.22},
+  {g:'성동',  elec:246899, voted:163508, rate:66.21, ose:47.18, jeon:51.21},
+  {g:'광진',  elec:301915, voted:190465, rate:63.20, ose:48.68, jeon:48.64},
+  {g:'동대문',elec:317743, voted:203152, rate:63.93, ose:47.29, jeon:50.02},
+  {g:'중랑',  elec:342996, voted:209679, rate:61.17, ose:44.24, jeon:53.26},
+  {g:'성북',  elec:376276, voted:240270, rate:63.86, ose:44.92, jeon:52.05},
+  {g:'강북',  elec:256006, voted:153017, rate:59.77, ose:43.10, jeon:54.28},
+  {g:'도봉',  elec:271153, voted:172951, rate:63.78, ose:45.59, jeon:52.18},
+  {g:'노원',  elec:426497, voted:278981, rate:65.41, ose:45.62, jeon:51.62},
+  {g:'은평',  elec:408635, voted:254990, rate:62.39, ose:42.28, jeon:54.69},
+  {g:'서대문',elec:270323, voted:175301, rate:64.84, ose:45.83, jeon:50.80},
+  {g:'마포',  elec:320072, voted:207222, rate:64.77, ose:46.88, jeon:49.61},
+  {g:'양천',  elec:364357, voted:240727, rate:66.07, ose:49.22, jeon:48.48},
+  {g:'강서',  elec:492152, voted:305341, rate:62.04, ose:45.35, jeon:51.84},
+  {g:'구로',  elec:349214, voted:218988, rate:62.71, ose:45.19, jeon:51.97},
+  {g:'금천',  elec:209157, voted:122878, rate:58.75, ose:43.57, jeon:53.52},
+  {g:'영등포',elec:340654, voted:216848, rate:63.64, ose:50.50, jeon:46.68},
+  {g:'동작',  elec:337561, voted:220143, rate:64.05, ose:50.37, jeon:46.44},
+  {g:'관악',  elec:450187, voted:264942, rate:58.76, ose:44.28, jeon:51.68},
+  {g:'서초',  elec:352303, voted:233571, rate:66.30, ose:64.68, jeon:33.19},
+  {g:'강남',  elec:470870, voted:294447, rate:62.56, ose:65.98, jeon:31.92},
+  {g:'강동',  elec:432789, voted:284899, rate:65.83, ose:50.65, jeon:46.95},
+];
+
+const AVG = 63.6;
+function won(d){return d.ose > d.jeon;}
+let charts={};
+
+function show(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  event.target.classList.add('active');
+  if(id==='scatter'&&!charts.scat) buildScat();
+  if(id==='gap'&&!charts.gap) buildGap();
+  if(id==='turnout'&&!charts.rank) buildRank();
+  if(id==='table'&&!charts.tbl) buildTable();
+}
+
+// ── 산포도 ──
+function buildScat(){
+  const pts = D.map(d=>({
+    x:d.rate, y:d.ose,
+    r: Math.sqrt(d.voted/2200),
+    label:d.g, won:won(d), gap:+(d.ose-d.jeon).toFixed(1), voted:d.voted
+  }));
+  charts.scat = new Chart(document.getElementById('scatChart'),{
+    type:'bubble',
+    data:{datasets:[
+      {label:'오세훈 승리',
+       data:pts.filter(p=>p.won),
+       backgroundColor:'rgba(74,158,255,0.7)',
+       borderColor:'rgba(74,158,255,0.9)',borderWidth:1},
+      {label:'정원오 승리',
+       data:pts.filter(p=>!p.won),
+       backgroundColor:'rgba(255,95,110,0.6)',
+       borderColor:'rgba(255,95,110,0.8)',borderWidth:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>{
+          const d=ctx.raw;
+          return [`${d.label}`, `투표율 ${d.x}%`, `오세훈 ${d.y}%`, `격차 ${d.gap>0?'+':''}${d.gap}%p`, `투표자 ${(d.voted/10000).toFixed(1)}만명`];
+        }}}
+      },
+      scales:{
+        x:{min:57,max:68,
+           title:{display:true,text:'구별 투표율 (%)',color:'#7a8099',font:{size:11}},
+           ticks:{color:'#7a8099',callback:v=>v+'%',font:{size:10}},
+           grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{min:38,max:70,
+           title:{display:true,text:'오세훈 득표율 (%)',color:'#7a8099',font:{size:11}},
+           ticks:{color:'#7a8099',callback:v=>v+'%',font:{size:10}},
+           grid:{color:'rgba(255,255,255,0.05)'}}
+      }
+    }
+  });
+
+  const linesPlug={id:'lines',afterDraw(c){
+    const {ctx,chartArea:{top,bottom,left,right},scales:{x,y}}=c;
+    const xRef=x.getPixelForValue(AVG), yRef=y.getPixelForValue(50);
+    ctx.save();
+    ctx.strokeStyle='rgba(245,166,35,0.5)';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+    ctx.beginPath();ctx.moveTo(xRef,top);ctx.lineTo(xRef,bottom);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(left,yRef);ctx.lineTo(right,yRef);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(245,166,35,0.8)';ctx.font='10px DM Mono,monospace';
+    ctx.fillText('평균 '+AVG+'%',xRef+4,top+14);
+    ctx.fillText('50%',left+4,yRef-6);
+    c.data.datasets.forEach((ds,di)=>{
+      c.getDatasetMeta(di).data.forEach((pt,i)=>{
+        const d=ds.data[i];
+        ctx.fillStyle=di===0?'rgba(180,210,255,0.9)':'rgba(255,180,185,0.9)';
+        ctx.font='bold 10px Noto Sans KR,sans-serif';
+        ctx.fillText(d.label,pt.x+d.r+2,pt.y-2);
+      });
+    });
+    ctx.restore();
+  }};
+  Chart.register(linesPlug);
+  charts.scat.update();
+
+  const q1=D.filter(d=>d.rate>=AVG&&won(d));
+  const q2=D.filter(d=>d.rate>=AVG&&!won(d));
+  const q3=D.filter(d=>d.rate<AVG&&won(d));
+  const q4=D.filter(d=>d.rate<AVG&&!won(d));
+  document.getElementById('scatFinding').innerHTML=
+    `<strong>사분면 분류 결과</strong><br>
+    🔵 고투표율+보수 우세: <strong>${q1.map(d=>d.g).join(', ')||'없음'}</strong><br>
+    🟢 고투표율+진보 우세: <strong>${q2.map(d=>d.g).join(', ')||'없음'}</strong><br>
+    🔴 저투표율+보수 우세: <strong>${q3.map(d=>d.g).join(', ')||'없음'}</strong> (기본 지지율 압도 지역)<br>
+    🟡 저투표율+진보 우세: <strong style="color:#f5a623;">${q4.map(d=>d.g).join(', ')||'없음'}</strong> ← <strong style="color:#f5a623;">진보 동원 실패 지역</strong>`;
+}
+
+// ── 득표 격차 ──
+function buildGap(){
+  const sorted=[...D].sort((a,b)=>(b.ose-b.jeon)-(a.ose-a.jeon));
+  const gaps=sorted.map(d=>+(d.ose-d.jeon).toFixed(2));
+  charts.gap=new Chart(document.getElementById('gapChart'),{
+    type:'bar',
+    data:{
+      labels:sorted.map(d=>d.g+(won(d)?' ★':'')),
+      datasets:[{label:'격차(%p)',data:gaps,
+        backgroundColor:gaps.map(v=>v>0?'rgba(74,158,255,0.8)':'rgba(255,95,110,0.75)'),
+        borderWidth:0,borderRadius:3}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>{
+          const d=sorted[ctx.dataIndex];
+          return [`오세훈 ${d.ose}%`,`정원오 ${d.jeon}%`,`격차 ${ctx.parsed.x>0?'+':''}${ctx.parsed.x.toFixed(1)}%p`,`투표율 ${d.rate}%`];
+        }}}},
+      scales:{
+        x:{ticks:{color:'#7a8099',callback:v=>(v>0?'+':'')+v+'%p',font:{size:10}},
+           grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{ticks:{color:'#e8eaf0',font:{size:10}}}
+      }
+    }
+  });
+  const zp={id:'z0',afterDraw(c){
+    const {ctx,chartArea:{top,bottom},scales:{x}}=c;
+    const xz=x.getPixelForValue(0);
+    ctx.save();ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth:1;
+    ctx.beginPath();ctx.moveTo(xz,top);ctx.lineTo(xz,bottom);ctx.stroke();ctx.restore();
+  }};
+  Chart.register(zp);charts.gap.update();
+}
+
+// ── 투표율 순위 ──
+function buildRank(){
+  const sorted=[...D].sort((a,b)=>b.rate-a.rate);
+  charts.rank=new Chart(document.getElementById('rankChart'),{
+    type:'bar',
+    data:{
+      labels:sorted.map(d=>d.g+(won(d)?' ★':'')),
+      datasets:[
+        {label:'오세훈',data:sorted.map(d=>d.ose),
+         backgroundColor:sorted.map(d=>won(d)?'rgba(74,158,255,0.85)':'rgba(74,158,255,0.22)'),
+         borderWidth:0,borderRadius:2},
+        {label:'정원오',data:sorted.map(d=>d.jeon),
+         backgroundColor:sorted.map(d=>!won(d)?'rgba(255,95,110,0.8)':'rgba(255,95,110,0.18)'),
+         borderWidth:0,borderRadius:2}
+      ]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>{
+          const d=sorted[ctx.dataIndex];
+          return `${ctx.dataset.label}: ${ctx.parsed.x}% | 투표율 ${d.rate}%`;
+        }}}},
+      scales:{
+        x:{min:28,max:72,ticks:{color:'#7a8099',callback:v=>v+'%',font:{size:10}},
+           grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{ticks:{color:'#e8eaf0',font:{size:10}}}
+      }
+    }
+  });
+  const hi=sorted.slice(0,12), lo=sorted.slice(12);
+  const hiW=hi.filter(d=>won(d)).length, loW=lo.filter(d=>won(d)).length;
+  document.getElementById('rankFinding').innerHTML=
+    `★ = 오세훈 승리구 (투표율 높은 순 정렬)<br>
+    투표율 상위 12개 구 중 오세훈 승리: <strong>${hiW}개</strong> / 투표율 하위 12개 구 중 오세훈 승리: <strong>${loW}개</strong><br>
+    <strong>해석:</strong> ${hiW>loW?'투표율 높은 구에서 오세훈이 더 많이 이김 → 보수 결집이 유효한 지역도 존재':hiW===loW?'투표율 높낮이와 승패 상관 약함 → 지역 기본 성향이 더 결정적':'투표율 낮은 구에서도 오세훈이 이김 → 기본 지지율이 투표율을 초과'}`;
+}
+
+// ── 데이터 테이블 ──
+function buildTable(){
+  const tbody=document.getElementById('tableBody');
+  const sorted=[...D].sort((a,b)=>a.rate-b.rate); // 투표율 낮은 순
+  sorted.forEach(d=>{
+    const gap=+(d.ose-d.jeon).toFixed(2);
+    const w=won(d);
+    const oseBar=`<div class="bar-cell"><div class="mini-bar" style="width:${d.ose*1.2}px;background:${w?'var(--blue)':'rgba(74,158,255,0.3)'};"></div>${d.ose}%</div>`;
+    const jeonBar=`<div class="bar-cell"><div class="mini-bar" style="width:${d.jeon*1.2}px;background:${!w?'var(--red)':'rgba(255,95,110,0.3)'};"></div>${d.jeon}%</div>`;
+    tbody.innerHTML+=`<tr>
+      <td style="font-weight:500;">${d.g}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--muted);">${d.elec.toLocaleString()}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--muted);">${d.voted.toLocaleString()}</td>
+      <td style="font-family:'DM Mono',monospace;color:${d.rate<AVG?'var(--red)':'var(--green)'};">${d.rate}%</td>
+      <td>${oseBar}</td>
+      <td>${jeonBar}</td>
+      <td style="font-family:'DM Mono',monospace;color:${gap>0?'var(--blue)':'var(--red)'};">${gap>0?'+':''}${gap}%p</td>
+      <td class="${w?'won':'lost'}">${w?'오세훈 ★':'정원오'}</td>
+    </tr>`;
+  });
+  charts.tbl=true;
+}
+
+// 초기 로드
+buildScat();
+</script>
+</body>
+</html>
